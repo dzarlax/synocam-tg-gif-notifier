@@ -56,4 +56,4 @@ Example:
 
 Based on https://github.com/fabtesta/synology-surveillance-api-motion-telegram-gifs
 
-If no events got from camera, that in reality has, camera should be configured to record motion events?
+If no events got from camera, that in reality has, camera should be configured to record motion events.
