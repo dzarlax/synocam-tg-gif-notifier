@@ -52,3 +52,6 @@ Example:
 [INFO] (MainThread) Synology Info Camera Id 3 Name arzilla_campo IP 192.168.1.148
 [INFO] (MainThread) Synology Info Camera Id 4 Name arzilla_veranda_interno IP 192.168.1.126
 ```
+
+
+Based on https://github.com/fabtesta/synology-surveillance-api-motion-telegram-gifs
