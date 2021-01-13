@@ -8,10 +8,9 @@ import subprocess
 import sys
 import time
 from sqlite3 import Error
+
 import requests
 import telegram
-
-
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s] [%(levelname)s] (%(threadName)-10s) %(message)s',
@@ -236,7 +235,6 @@ class CameraMotionEventHandler:
 def main():
     config_file = os.environ['config_file']
     config = parse_config(config_file)
-    #config = parse_config('config.json')
 
     config_data_folder = ''
     if 'data_folder' in config:
