@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import datetime
 import json
 import logging
@@ -7,9 +7,9 @@ import sqlite3
 import subprocess
 import sys
 import time
-import telegram
 from sqlite3 import Error
 import requests
+import telegram
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s] [%(levelname)s] (%(threadName)-10s) %(message)s',
@@ -32,7 +32,8 @@ sql_create_processed_events_table = """ CREATE TABLE IF NOT EXISTS processed_eve
                                         processed_date timestamp NOT NULL
                                     ); """
 
-sql_create_processed_events_table_unique = """ CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_events_camera ON processed_events (camera_id); """
+sql_create_processed_events_table_unique = """ CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_events_camera \
+                                                ON processed_events (camera_id); """
 
 
 def parse_config(config_path):
@@ -122,27 +123,7 @@ def syno_last_event(base_url, camera_id, sid):
         event_data = json.loads(event_response.content.decode('utf-8'))
         if len(event_data["data"]["events"]) > 0 and event_data["data"]["events"][0]["cameraId"] == camera_id:
             logging.info('found event for camera %s', event_data["data"]["events"][0]["camera_name"])
-
-            epoch_start = event_data["data"]["events"][0]["startTime"]
-            epoch_stop = event_data["data"]["events"][0]["stopTime"]
-            utc_start = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_start))
-            utc_stop = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_stop))
-            diff_seconds = epoch_stop - epoch_start
-            diff_mins = ((diff_seconds // 60) % 60)
-            diff_hours = ((diff_mins // 60) % 60)
-
-            video_length = "{:02d}:{:02d}:{:02d}".format(diff_hours, diff_mins, diff_seconds)
-            syno_event_data = {'event_id': event_data["data"]["events"][0]["eventId"],
-                               'camera_id': event_data["data"]["events"][0]["cameraId"],
-                               'camera_name': event_data["data"]["events"][0]["camera_name"],
-                               'gif': '',
-                               'epoch_start_time': epoch_start,
-                               'epoch_stop_time': epoch_stop,
-                               'utc_start_time': utc_start,
-                               'utc_stop_time': utc_stop,
-                               'video_length': video_length}
-
-            return syno_event_data
+            return event_data["data"]["events"][0]["eventId"]
         else:
             return -1
 
@@ -186,7 +167,7 @@ def convert_video_gif(scale, skip_first_n_secs, max_length_secs, input_video, ou
 
     retcode = subprocess.call([
         "ffmpeg", "-stats", "-i", input_video, "-vf",
-        "fps=15,scale={}:-1:flags=lanczos".format(scale), "-an",
+        "fps=15,scale={}:-1:flags=lanczos".format(scale),
         "-ss", "00:00:" + "{}".format(skip_first_n_secs).zfill(2), "-t", "{}".format(max_length_secs), "-y",
         str(output_gif)
     ])
@@ -199,25 +180,21 @@ class CameraMotionEventHandler:
         self.base_url = base_url
         self.camera = camera
         self.config = config
+        self.ffmpeg_folder = self.config["ffmpeg_working_folder"]
         self.sid = sid
         self.bot = telegram.Bot(self.config["telegram_bot_token"])
-        # Keep history of events processed so we can guard against duplicate
+        # Keep a FIFO of files processed so we can guard against duplicate
+        # events
         self.processed_events_conn = processed_events_conn
 
-    def publish_telegram_document(self, event_data):
-        logging.info('publish_telegram_document %s %s', event_data['gif'], self.camera["id"])
+    def publish_telegram_document(self, event_id):
+        logging.info('publish_telegram_document %s %s', event_id, self.camera["id"])
 
         retcode = False
         try:
             self.bot.send_document(chat_id=self.config["chat_id"],
-                                   document=open(event_data['gif'], 'rb'),
-                                   caption='Video from camera {}. {}-{}, duration {}'.format(event_data['camera_name'],
-                                                                                             event_data[
-                                                                                                 'utc_start_time'],
-                                                                                             event_data[
-                                                                                                 'utc_stop_time'],
-                                                                                             event_data[
-                                                                                                 'video_length']))
+                                   document=open('{}/{}'.format(self.ffmpeg_folder, event_id), 'rb'),
+                                   caption='Замечено движение в {}'.format(self.camera['name']))
             retcode = True
         except Error as e:
             logging.error("CANNOT SEND DOCUMENT", e)
@@ -225,8 +202,7 @@ class CameraMotionEventHandler:
 
     def poll_event(self):
         logging.info('Start getting last camera event for camera %s %s', self.camera["id"], self.camera["name"])
-        event_data = syno_last_event(self.base_url, self.camera["id"], self.sid)
-        event_id = event_data['event_id']
+        event_id = syno_last_event(self.base_url, self.camera["id"], self.sid)
         if event_id > -1:
             if check_already_processed_event_by_camera(self.processed_events_conn, self.camera["id"], event_id):
                 logging.info('Event %s already processed', event_id)
@@ -240,14 +216,13 @@ class CameraMotionEventHandler:
                                                 self.camera["max_length_secs"],
                                                 mp4_file, outfile_gif)
             if convert_retcode == 0:
-                event_data['gif'] = outfile_gif
-                public_retcode = self.publish_telegram_document(event_data)
+                public_retcode = self.publish_telegram_document('{}.gif'.format(event_id))
                 if public_retcode:
-                    processed_event = (self.camera["id"], event_id, datetime.datetime.now());
+                    processed_event = (self.camera["id"], event_id, datetime.datetime.now())
                     replace_processed_events(self.processed_events_conn, processed_event)
                     logging.info('Done processing event_id %i', event_id)
                 else:
-                    logging.error('Invalid return code from mqtt publish for event id %i camera name %s', event_id,
+                    logging.error('Invalid return code from mqtt publish for event id %i camera topic %s', event_id,
                                   self.camera["name"])
             else:
                 logging.error('Invalid return code from ffmpeg subprocess call for event id %i', event_id)
@@ -256,10 +231,7 @@ class CameraMotionEventHandler:
 
 
 def main():
-    _, config_filename = sys.argv
-    logging.info('Starting')
-    logging.info('Parsing %s', config_filename)
-    config = parse_config(config_filename)
+    config = parse_config('config.json')
 
     config_data_folder = ''
     if 'data_folder' in config:
