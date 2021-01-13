@@ -11,6 +11,8 @@ from sqlite3 import Error
 import requests
 import telegram
 
+
+
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s] [%(levelname)s] (%(threadName)-10s) %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -195,6 +197,7 @@ class CameraMotionEventHandler:
             self.bot.send_document(chat_id=self.config["chat_id"],
                                    document=open('{}/{}'.format(self.ffmpeg_folder, event_id), 'rb'),
                                    caption='Замечено движение в {}'.format(self.camera['name']))
+            os.remove('{}/{}'.format(self.ffmpeg_folder, event_id))
             retcode = True
         except Error as e:
             logging.error("CANNOT SEND DOCUMENT", e)
@@ -231,7 +234,9 @@ class CameraMotionEventHandler:
 
 
 def main():
-    config = parse_config('config.json')
+    config_file = os.environ['config_file']
+    config = parse_config(config_file)
+    #config = parse_config('config.json')
 
     config_data_folder = ''
     if 'data_folder' in config:
