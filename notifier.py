@@ -184,6 +184,7 @@ class CameraMotionEventHandler:
         self.ffmpeg_folder = self.config["ffmpeg_working_folder"]
         self.sid = sid
         self.bot = telegram.Bot(self.config["telegram_bot_token"])
+        self.message = self.config["message"]
         # Keep a FIFO of files processed so we can guard against duplicate
         # events
         self.processed_events_conn = processed_events_conn
@@ -195,7 +196,7 @@ class CameraMotionEventHandler:
         try:
             self.bot.send_document(chat_id=self.config["chat_id"],
                                    document=open('{}/{}'.format(self.ffmpeg_folder, event_id), 'rb'),
-                                   caption='Замечено движение в {}'.format(self.camera['name']))
+                                   caption='{} {}'.format(self.message, self.camera['name']))
             os.remove('{}/{}'.format(self.ffmpeg_folder, event_id))
             retcode = True
         except Error as e:

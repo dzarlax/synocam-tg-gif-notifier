@@ -26,7 +26,8 @@ Config file:
     "scale": 1280
   }],
   "telegram_bot_token": "xxx",
-  "chat_id": "xxx"
+  "chat_id": "xxx",
+  "message": "Motion was detected in"
 }
 ```
 
@@ -40,6 +41,9 @@ Config file:
     * `skip_first_n_secs`: Skip seconds recorded before motion event is triggered
     * `max_length_secs`: Do not create gif for video full length but only with first n seconds
     * `scale`: Determine quality and size of the output gif
+* `telegram_bot_token`: Your telegram bot token from @botfather
+* `chat_id`: The id of chat where you want to post messages
+* `message`: Text for telegram message
 
 If you don't know camera ids, leave cameras section empty and you'll get ids printed at first run
 ```
