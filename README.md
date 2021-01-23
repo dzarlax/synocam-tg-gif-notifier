@@ -27,7 +27,8 @@ Config file:
   }],
   "telegram_bot_token": "xxx",
   "chat_id": "xxx",
-  "message": "Motion was detected in"
+  "message": "Motion was detected in",
+  "silence": "True"
 }
 ```
 
@@ -44,6 +45,7 @@ Config file:
 * `telegram_bot_token`: Your telegram bot token from @botfather
 * `chat_id`: The id of chat where you want to post messages
 * `message`: Text for telegram message
+* `silence`: True or False for enabling/disabling notifications
 
 If you don't know camera ids, leave cameras section empty and you'll get ids printed at first run
 ```
