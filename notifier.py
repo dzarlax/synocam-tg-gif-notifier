@@ -188,6 +188,7 @@ class CameraMotionEventHandler:
         # Keep a FIFO of files processed so we can guard against duplicate
         # events
         self.processed_events_conn = processed_events_conn
+        self.silence = self.config["silence"]
 
     def publish_telegram_document(self, event_id):
         logging.info('publish_telegram_document %s %s', event_id, self.camera["id"])
@@ -197,7 +198,7 @@ class CameraMotionEventHandler:
             self.bot.send_document(chat_id=self.config["chat_id"],
                                    document=open('{}/{}'.format(self.ffmpeg_folder, event_id), 'rb'),
                                    caption='{} {}'.format(self.message, self.camera['name']),
-                                   disable_notification=True)
+                                   disable_notification=self.silence)
             os.remove('{}/{}'.format(self.ffmpeg_folder, event_id))
             retcode = True
         except Error as e:
