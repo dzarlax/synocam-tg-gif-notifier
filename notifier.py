@@ -196,7 +196,8 @@ class CameraMotionEventHandler:
         try:
             self.bot.send_document(chat_id=self.config["chat_id"],
                                    document=open('{}/{}'.format(self.ffmpeg_folder, event_id), 'rb'),
-                                   caption='{} {}'.format(self.message, self.camera['name']))
+                                   caption='{} {}'.format(self.message, self.camera['name']),
+                                   disable_notification=True)
             os.remove('{}/{}'.format(self.ffmpeg_folder, event_id))
             retcode = True
         except Error as e:
