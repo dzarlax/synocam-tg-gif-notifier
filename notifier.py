@@ -168,7 +168,7 @@ def convert_video_gif(scale, skip_first_n_secs, max_length_secs, input_video, ou
 
     retcode = subprocess.call([
         "ffmpeg", "-stats", "-i", input_video, "-vf",
-        "fps=15,scale={}:-1:flags=lanczos".format(scale),
+        "fps=30,scale={}:-1:flags=lanczos".format(scale),
         "-ss", "00:00:" + "{}".format(skip_first_n_secs).zfill(2), "-t", "{}".format(max_length_secs), "-y",
         str(output_gif)
     ])
